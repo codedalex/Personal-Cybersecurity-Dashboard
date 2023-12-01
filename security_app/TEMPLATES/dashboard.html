@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+crossorigin=""/>
+ <!-- Make sure you put this AFTER Leaflet's CSS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
+
+<div class="container">
+    <h1 class="mt-5 mb-4">{{ user.username }} Dashboard</h1>
+
+    <div class="row">
+      <div class="col-md-6">
+        <h2>Password Information:</h2>
+        <p>Password Strength: {{ password_strength }}</p>
+        <p>Last Password Change: {{ last_password_change }}</p>
+
+    <!-- Add the div container for the password gauge -->
+        <div class="row mt-4">
+          <div class="col-md-6">
+            <h2>Password Strength Gauge:</h2>
+            <div id="react-root"></div>
+            <div id="password-strength-container"></div>
+          </div>
+        </div>
+
+
+        <!-- Add other password-related information as needed -->
+      </div>
+
+      <div class="col-md-6">
+        <h2>Login Information:</h2>
+        <p>Login Attempts: {{ login_attempts }}</p>
+        <p>Successful Logins: {{ successful_logins }}</p>
+        <p>Failed Login Timestamp: {{ failed_login_timestamp }}</p>
+
+        <!-- Add the div container for the login info visualization -->
+        <div class="row mt-4">
+          <div class="col-md-6">
+            <h2>Login Information Visualization:</h2>
+            <div id="login-info-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <h2>Account Information:</h2>
+        <p>Account Created: {{ account_created_timestamp }}</p>
+        <p>Account Updated: {{ account_updated_timestamp }}</p>
+    
+        <!-- Add the div container for the account info visualization -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <h2>Account Information Visualization:</h2>
+                <div id="account-info-container"></div>
+            </div>
+        </div>
+    </div>
+      
+    
+    <div class="col-md-6">
+      <h2>Security Questions:</h2>
+      <p>Security Question Reset Attempts: {{ security_question_reset_attempts }}</p>
+      <p>Security Question Reset Timestamp: {{ security_question_reset_timestamp }}</p>
+      <p>Total Time Spent: {{ total_time_spent }}</p>
+  
+      <!-- Add the div container for the security questions visualization -->
+      <div class="row mt-4">
+          <div class="col-md-6">
+              <h2>Security Questions Visualization:</h2>
+              <div id="security-questions-container"></div>
+          </div>
+      </div>
+  </div>
+
+  <!-- Add this section for Device Information -->
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <h2>Device Information:</h2>
+      <p>Last Device Used: {{ last_device_info.device }}</p>
+      <p>Device Type: {{ last_device_info.device_type }}</p>
+      <p>Operating System: {{ last_device_info.os }}</p>
+      <p>Browser: {{ last_device_info.browser }}</p>
+      <p>Screen Resolution: {{ last_device_info.screen_resolution }}</p>
+      <p>IP Address: {{ last_device_info.ip_address }}</p>
+      <p>Geolocation: {{ last_device_info.geolocation }}</p>
+      <p>Device Identifier: {{ last_device_info.device_identifier }}</p>
+      <p>Network Info: {{ last_device_info.network_info.type }} ({{ last_device_info.network_info.speed }})</p>
+      <!-- Add more details as needed -->
+
+      <h3>Device History:</h3>
+      <ul>
+        {% for entry in device_history %}
+          <li>{{ entry.device }} at {{ entry.timestamp }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+      <div class="col-md-6">
+          <h2>Device Visualization:</h2>
+          <!-- Add div containers for each visualization -->
+          <div id="device-usage-line-chart"></div>
+          <div id="device-type-distribution-chart"></div>
+          <div id="device-history-timeline"></div>
+          <div id="device-interaction-graph"></div>
+          <div id="device-location-map"></div>
+          <div id="device-health-dashboard"></div>
+      </div>
+  </div>
+
+
+    <!-- Add this section for Session History -->
+    <div class="row mt-4">
+      <div class="col-md-6">
+          <h2>Session Information:</h2>
+          <h3>Active Sessions:</h3>
+          <ul>
+              {% for session in active_sessions %}
+              <li>{{ session }} <!-- You might need to adjust this based on your actual session data --></li>
+              {% endfor %}
+          </ul>
+          </div>
+  
+          <!-- Add the div container for the session information visualization -->
+              <div class="col-md-6">
+                  <h2>Session Information Visualization:</h2>
+                  <div id="session-info-container"></div>
+              </div>
+          </div>
+      </div>
+  
+
+    <!-- Add this section for Security Alerts -->
+    <div class="row mt-4">
+      <div class="col-md-6">
+          <h2>Security Alerts:</h2>
+          <ul>
+              {% for alert in security_alerts %}
+                  <li>{{ alert.type }} - {{ alert.count }}</li>
+              {% endfor %}
+          </ul>
+          </div>
+  
+          <!-- Add the div container for the security alerts visualization -->
+              <div class="col-md-6">
+                  <h2>Security Alerts Visualization:</h2>
+                  <div id="security-alerts-container"></div>
+              </div>
+          </div>
+
+          <div class="row mt-4">
+            <div class="col-md-6">
+                <h2>Recent Audits:</h2>
+                <ul>
+                    {% for audit in recent_audits %}
+                    <li>{{ audit.action }} at {{ audit.timestamp }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        
+            <!-- Add the div container for the recent audits visualization -->
+            <div class="col-md-6">
+                <h2>Recent Audits Visualization:</h2>
+                <div id="recent-audits-container"></div>
+            </div>
+        </div>
+        </div>
+
+    <!-- Add this section for Location Information -->
+    <div class="container">
+    <div class="row mt-4">
+      <div class="col-md-6">
+          <h2>Location Information:</h2>
+      </div>
+      <div class="container">
+          <h3>Location History Timeline:</h3>
+          <div id="location-history-timeline"></div>
+          <div class="col-md-6">
+            <h2>Location Information:</h2>
+            <h3>Location History Map:</h3>
+            <div id="location-history-map" style="height: 300px;"></div>
+          </div>
+        </div>
+     </div>
+  </div>
+
+
+
+
+<!-- Include D3.js from CDN -->
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script src="https://unpkg.com/vis-network@7.12.0/dist/vis-network.min.js"></script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.4/raphael-min.js"></script>
+<script src="https://cdn.rawgit.com/toorshia/justgage/master/justgage.js"></script>
+
+
+<!-- Include your D3 visualization scripts -->
+<script src="{% static 'security_app/js/loginInfoVisualization.js' %}"></script>
+<script src="{% static 'security_app/js/PasswordStrengthGauge.js' %}"></script>
+
+
+  <!-- Call the function to create the password strength gauge -->
+  <script>
+    createPasswordStrengthGauge('password-strength-container', "{{ password_strength }}");
+  </script>
+
+  <!-- Call the function to create the login info visualization -->
+  <script>
+    createLoginInfoVisualization('login-info-container', "{{ login_attempts }}", "{{ successful_logins }}", "{{ failed_login_timestamp }}");
+  </script>
+    <!-- Include your new D3 visualization script -->
+  <script src="{% static 'security_app/js/accountInfoVisualization.js' %}"></script>
+  <!-- Call the function to create the account info visualization -->
+  <script>
+      createAccountInfoVisualization('account-info-container', "{{ account_created_timestamp }}", "{{ account_updated_timestamp }}");
+  </script>
+  <script src="{% static 'security_app/js/securityQuestionsVisualization.js' %}"></script>
+  <!-- Call the function to create the security questions visualization -->
+  <script>
+    createSecurityQuestionsVisualization('security-questions-container', "{{ security_question_reset_attempts }}", "{{ security_question_reset_timestamp }}", "{{ total_time_spent }}");
+  </script>
+  <script src="{% static 'security_app/js/deviceInformationVisualization.js' %}"></script>
+  <!-- Call the functions to create the device visualizations -->
+  <script>
+      createDeviceUsageLineChart('device-usage-line-chart', "{{ device_history|safe }}");
+      createDeviceTypeDistributionChart('device-type-distribution-chart', "{{ device_history|safe }}");
+      createDeviceHistoryTimeline('device-history-timeline', "{{ device_history|safe }}");
+      createDeviceInteractionGraph('device-interaction-graph', "{{ device_history|safe }}");
+      createDeviceLocationMap('device-location-map', "{{ location_history|safe }}");
+      createDeviceHealthDashboard('device-health-dashboard', "{{ device_history|safe }}");
+  </script>
+  <script src="{% static 'security_app/js/sessionInfoVisualization.js' %}"></script>
+  <script src="{% static 'security_app/js/locationHistoryTimeline.js' %}"></script>
+
+  <!-- Call the function to create the location history timeline -->
+  <script>
+      createLocationHistoryTimeline('location-history-timeline', "{{ location_history|safe }}");
+  </script>
+     <!-- Include Leaflet.js -->
+     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- Include your Leaflet visualization script -->
+  <script src="{% static 'security_app/js/locationHistoryMap.js' %}"></script>
+
+  <!-- Call the function to create the location history map -->
+  <script>
+      createLocationHistoryMap('location-history-map', "{{ location_history|safe }}");
+  </script>
+  <script src="{% static 'security_app/js/securityAlertsVisualization.js' %}"></script>
+  <!-- Call the function to create the security alerts visualization -->
+  <script>
+      createSecurityAlertsVisualization('security-alerts-container', "{{ security_alerts|safe }}");
+  </script>
+{% endblock content %}
+
+
+

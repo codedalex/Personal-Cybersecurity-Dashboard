@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% autoescape off %}
+    Click the following link to confirm your email address:
+    {{ protocol }}://{{ domain }}{% url 'confirm_email' uidb64=uidb64 token=token %}
+{% endautoescape %}
+{% endblock %}
+
+
+

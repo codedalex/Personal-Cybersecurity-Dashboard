@@ -1,0 +1,9 @@
+<!-- templates/csrf_failure.html -->
+
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>CSRF Verification Failed</h1>
+    <p>Reason: {{ reason }}</p>
+    <!-- You can customize the content as needed -->
+{% endblock %}
