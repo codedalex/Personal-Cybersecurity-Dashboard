@@ -13,6 +13,7 @@ from django.contrib.auth.signals import user_logged_in, user_login_failed
 from django.dispatch import receiver
 from django.contrib.auth import authenticate
 from django.contrib.gis.geoip2 import GeoIP2
+from .utils import send_sms_verification_code, parse_user_agent, get_screen_resolution, get_geolocation, generate_device_identifier, get_network_info
 
 
 # Create your models here.
@@ -167,7 +168,6 @@ def user_logged_in_handler(sender, request, user, **kwargs):
         'device' : user.last_device_used,
         'timestamp': user.last_login_timestamp.isoformat() # convert timestamp into ISO format
     })
-
 
     # Save the changes
     user.save()

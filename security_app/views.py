@@ -12,14 +12,11 @@ from django.core.mail import send_mail
 from django.core.files import File
 from django.conf import settings
 from pathlib import Path
-import logging
-import qrcode
-import os
+import base64, logging, qrcode, os
 from django.utils import timezone
 from django.contrib.auth import views as auth_views
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
-import base64
 from urllib.parse import parse_qs, urlparse
 from django.core.files.images import ImageFile
 from django.contrib import messages, auth
@@ -488,13 +485,13 @@ def dashboard(request):
     password_strength = user.password_strength 
     logger.info('Password Strength: %s', password_strength)
 
-      # Record device information
+    # Record device information
     user.last_device_info = {
         'user_agent': request.META.get('HTTP_USER_AGENT'),
-        'device_type': parse_user_agent(request.META.get('HTTP_USER_AGENT')),
+        'device_type': parse_user_agent(request.META.get('HTTP_USER_AGENT'), component='device_type'),
         'os': parse_user_agent(request.META.get('HTTP_USER_AGENT'), component='os'),
         'browser': parse_user_agent(request.META.get('HTTP_USER_AGENT'), component='browser'),
-        'screen_resolution': get_screen_resolution(request),
+        'screen_resolution': get_screen_resolution(),
         'ip_address': request.META.get('REMOTE_ADDR'),
         'geolocation': get_geolocation(request.META.get('REMOTE_ADDR')),
         'device_identifier': generate_device_identifier(request),
@@ -502,49 +499,46 @@ def dashboard(request):
     }
     user.save()
 
-
     # Get data for the dashboard
     password_strength = user.password_strength
-    last_password_change = user.last_password_change
-    login_attempts = user.login_attempts
-    successful_logins = user.successful_logins
-    failed_login_timestamp = user.failed_login_timestamp
-    account_created_timestamp = user.account_created_timestamp
-    account_updated_timestamp = user.account_updated_timestamp
-    two_factor_method = user.two_factor_method
-    security_question_reset_attempts = user.security_question_reset_attempts
-    security_question_reset_timestamp = user.security_question_reset_timestamp
-    total_time_spent = user.total_time_spent
-    last_device_used = user.last_device_used
-    device_history = user.device_history
-    location_history = user.location_history
-    active_sessions = user.active_sessions
-    security_alerts = user.security_alerts
+    last_device_info = user.last_device_info
+
+    # Extract OS information
+    os_info = last_device_info['os']
+    os_display = f"{os_info['os_type']} {os_info['os_version']}"
+
+    # Extract browser information
+    browser_info = last_device_info['browser']
+    browser_display = browser_info['browser_family']
 
     # Example: Fetch recent audit trail entries
     recent_audits = AuditTrail.objects.filter(user=user).order_by('-timestamp')[:10]
 
     context = {
         'password_strength': password_strength,
-        'last_password_change': last_password_change,
-        'login_attempts': login_attempts,
-        'successful_logins': successful_logins,
-        'failed_login_timestamp': failed_login_timestamp,
-        'account_created_timestamp': account_created_timestamp,
-        'account_updated_timestamp': account_updated_timestamp,
-        'two_factor_method': two_factor_method,
-        'security_question_reset_attempts': security_question_reset_attempts,
-        'security_question_reset_timestamp': security_question_reset_timestamp,
-        'total_time_spent': total_time_spent,
+        'last_password_change': user.last_password_change,
+        'login_attempts': user.login_attempts,
+        'successful_logins': user.successful_logins,
+        'failed_login_timestamp': user.failed_login_timestamp,
+        'account_created_timestamp': user.account_created_timestamp,
+        'account_updated_timestamp': user.account_updated_timestamp,
+        'two_factor_method': user.two_factor_method,
+        'security_question_reset_attempts': user.security_question_reset_attempts,
+        'security_question_reset_timestamp': user.security_question_reset_timestamp,
+        'total_time_spent': user.total_time_spent,
         'recent_audits': recent_audits,
-        'last_device_used': last_device_used,
-        'device_history': device_history,
-        'location_history': location_history,
-        'active_sessions': active_sessions,
-        'security_alerts': security_alerts,
+        'last_device_used': user.last_device_used,
+        'last_device_info': user.last_device_info,
+        'device_history': user.device_history,
+        'location_history': user.location_history,
+        'active_sessions': user.active_sessions,
+        'security_alerts': user.security_alerts,
+        'os_display': os_display,
+        'browser_display': browser_display,
     }
 
     return render(request, 'dashboard.html', context)
+
 
 
 

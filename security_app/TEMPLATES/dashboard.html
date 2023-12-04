@@ -82,21 +82,52 @@ crossorigin=""/>
   <div class="row mt-4">
     <div class="col-md-6">
       <h2>Device Information:</h2>
-      <p>Last Device Used: {{ last_device_info.device }}</p>
-      <p>Device Type: {{ last_device_info.device_type }}</p>
-      <p>Operating System: {{ last_device_info.os }}</p>
-      <p>Browser: {{ last_device_info.browser }}</p>
-      <p>Screen Resolution: {{ last_device_info.screen_resolution }}</p>
-      <p>IP Address: {{ last_device_info.ip_address }}</p>
-      <p>Geolocation: {{ last_device_info.geolocation }}</p>
-      <p>Device Identifier: {{ last_device_info.device_identifier }}</p>
-      <p>Network Info: {{ last_device_info.network_info.type }} ({{ last_device_info.network_info.speed }})</p>
+      <table class="table table-bordered">
+        <tbody>
+          <tr>
+            <th>Last Device Used</th>
+            <td>{{ last_device_info.user_agent }}</td>
+          </tr>
+          <tr>
+            <th>Device Type</th>
+             <td>{{ last_device_info.device_type.os_type }} {{ last_device_info.device_type.device_type }} </td>
+          </tr>
+          <tr>
+            <th>Operating System</th>
+            <td>{{ os_display }}</td>
+          </tr>
+          <tr>
+            <th>Browser</th>
+            <td>{{ browser_display }}</td>
+          </tr>
+          <tr>
+            <th>Screen Resolution</th>
+            <td>{{ last_device_info.screen_resolution }}</td>
+          </tr>
+          <tr>
+            <th>IP Address</th>
+            <td>{{ last_device_info.ip_address }}</td>
+          </tr>
+          <tr>
+            <th>Geolocation</th>
+            <td>{{ last_device_info.geolocation }}</td>
+          </tr>
+          <tr>
+            <th>Device Identifier</th>
+            <td>{{ last_device_info.device_identifier }}</td>
+          </tr>
+          <tr>
+            <th>Network Info</th>
+            <td>{{ last_device_info.network_info.type }} {{ last_device_info.network_info.speed }}</td>
+          </tr>
+        </tbody>
+      </table>
       <!-- Add more details as needed -->
 
       <h3>Device History:</h3>
-      <ul>
+      <ul class="list-group">
         {% for entry in device_history %}
-          <li>{{ entry.device }} at {{ entry.timestamp }}</li>
+          <li class="list-group-item">{{ entry.device }} at {{ entry.timestamp }}</li>
         {% endfor %}
       </ul>
     </div>
