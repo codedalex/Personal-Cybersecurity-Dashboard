@@ -27,7 +27,7 @@ class UserProfileForm(forms.ModelForm):
     city=forms.CharField(label='City', widget=forms.TextInput(attrs={'class':'form-control'}))
     zipcode=forms.CharField(label='Zipcode', widget=forms.TextInput(attrs={'class':'form-control'}))
     address1=forms.CharField(label='Primary Address', widget=forms.TextInput(attrs={'class':'form-control'}))
-    address2=forms.CharField(label='Secondary Address', widget=forms.TextInput(attrs={'class':'form-control'}))
+    address2=forms.CharField(label='Secondary Address', widget=forms.TextInput(attrs={'class':'form-control'}), required=False)
     profile_picture=forms.ImageField(label='profile_image', required=False)
 
 
