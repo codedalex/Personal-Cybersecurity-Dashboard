@@ -278,11 +278,15 @@ def set_security_questions(request, user_id):
     if request.method == "POST":
         form1 = SecurityQuestionForm(request.POST, instance=user)
         if form1.is_valid():
-            # save the security questions associated with the user
-            form1.save()
-
-            messages.success(request, "Security questions set successfully")
-            return redirect('accounts_home', user_id=user.id)
+            if form1.cleaned_data.get('security_question_1') and form1.cleaned_data.get('security_question_2'):
+                # save the security questions associated with the user
+            
+                # save the security questions associated with the user
+                form1.save()
+                messages.success(request, "Security questions set successfully")
+                return redirect('enable_2fa', user_id=user.id)
+            else:
+                messages.error(request, "Please answer both security questions.")
     else:
         form1 = SecurityQuestionForm()
 
@@ -390,7 +394,7 @@ def enable_2fa(request, user_id):
     logo_path = os.path.join(settings.BASE_DIR, 'security_app', 'images', 'qrcode.png')
     logo_img = Image.open(logo_path)
 
-    # Convert the logo image to RGB mode without alpha channel
+    # Convert the logo image to RGB mode without an alpha channel
     logo_img = logo_img.convert('RGB')
 
     # Resize the logo image to your desired size
@@ -405,7 +409,6 @@ def enable_2fa(request, user_id):
     # Paste the logo onto the combined image
     combined_img.paste(logo_img, ((combined_img.width - logo_img.width) // 2, (combined_img.height - logo_img.height) // 2))
 
-
     # Save the combined image to BytesIO
     img_bytes_io = BytesIO()
     combined_img.save(img_bytes_io, format='PNG')
@@ -419,14 +422,22 @@ def enable_2fa(request, user_id):
         'totp_secret': totp_secret_data_uri,
         'actual_totp_secret': actual_totp_secret,
     }
-    # Inside enable_2fa view after verifying the 2FA code:
-    user.is_2fa_enabled = True
-    user.security_questions_answered = True
-    user.save()
 
     if not (user.security_question_1 and user.security_question_2):
+        # If security questions are not set, redirect to set them first
+        messages.error(request, 'Please set security questions before enabling 2FA.')
         return redirect('set_security_questions', user_id=user.id)
+
+    if request.session.get('top_verified', False):
+        # If 2FA setup is complete, update user status and redirect
+        user.is_2fa_enabled = True
+        user.security_questions_answered = True
+        user.save()
+        del request.session['top_verified']
+        return render(request, 'accounts_home', user_id=user.id)
     else:
+        # If 2FA setup is not complete, show an error message
+        messages.error(request, 'Please complete the 2FA setup process.')
         return render(request, 'user/enable_2fa.html', context)
 
 
@@ -462,36 +473,64 @@ def verify_2fa_code(request):
         for totp_device in totp_devices:
             if totp_device.verify_token(verification_code):
                 # Code is valid, log in the user
-                messages.success(request, 'Authenticaticated successfully.')
+                messages.success(request, 'Authenticated successfully.')
+
+                # Update user's 2FA status
+                request.user.is_2fa_enabled = True
+                request.user.save()
+
                 return redirect('accounts_home', user_id=request.user.id)
 
         # If none of the TOTPDevices had a valid code
         messages.error(request, 'Invalid Verification code. Please try again.')
-        return render(request, 'user/verify_2fa_code.html')
 
-    return redirect('accounts_home')
+    return render(request, 'authentication/verify_2fa_code.html')
+
 @login_required
 def disable_2fa(request):
     user = request.user
 
+    if not (user.security_question_1 and user.security_question_2):
+        # If security questions are not set, prompt the user to set them first
+        messages.error(request, 'Please set security questions before disabling 2FA.')
+        return redirect('set_security_questions', user_id=user.id)
+
     if request.method == 'POST':
-        security_question_1_answer = request.POST.get('answer_security_1')
-        security_question_2_answer = request.POST.get('answer_security_2')
+        form = SecurityAnswerForm(request.POST, instance=user)
+        if form.is_valid():
+            # Make sure to use the cleaned_data attribute after validating the form
+            security_question_1_answer = form.cleaned_data.get('answer_security_1')
+            security_question_2_answer = form.cleaned_data.get('answer_security_2')
 
-        # Check if security questions are answered correctly
-        if (
-            security_question_1_answer == user.answer_security_1
-            and security_question_2_answer == user.answer_security_2
-        ):
-            # Disable 2FA
-            user.is_2fa_enabled = False
-            user.save()
+            # Add print statements for debugging
+            print(f"User's answer to security question 1: {security_question_1_answer}")
+            print(f"User's answer to security question 2: {security_question_2_answer}")
+            print(f"Database answer to security question 1: {user.answer_security_1}")
+            print(f"Database answer to security question 2: {user.answer_security_2}")
 
-            messages.success(request, 'Two-Factor Authenticatioon disabled successfully.')
-            return redirect('login')
+            # Check if security questions are answered correctly
+            if (
+                user.answer_security_1 and user.answer_security_2 and
+                security_question_1_answer == user.answer_security_1 and
+                security_question_2_answer == user.answer_security_2
+            ):
+                # Disable 2FA
+                user.is_2fa_enabled = False
+                user.save()
+
+                messages.success(request, 'Two-Factor Authentication disabled successfully.')
+                return redirect('login')
+            else:
+                messages.error(request, 'Incorrect Answers')
         else:
-            messages.error(request, 'Incorect Answers')
-    return render(request, 'user/disable_2fa.html', {'user': user})
+            # Handle form validation errors
+            print(form.errors)
+            messages.error(request, 'Form validation error')
+
+    return render(request, 'user/disable_2fa.html', {'user': user, 'form': SecurityAnswerForm()})
+
+
+
 
 @login_required
 def dashboard(request):

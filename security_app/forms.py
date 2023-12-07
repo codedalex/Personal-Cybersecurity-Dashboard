@@ -63,14 +63,18 @@ class SecurityQuestionForm(forms.ModelForm):
         self.fields['security_question_2'].widget = forms.Select(choices=security_questions_choices)
 
 
-class SecurityAnswerForm(forms.Form):
-    username = forms.CharField(label='Username', widget=forms.TextInput(attrs={'class': 'form-control'}))
+class SecurityAnswerForm(forms.ModelForm):
+    # username = forms.CharField(label='Username', widget=forms.TextInput(attrs={'class': 'form-control'}))
     answer_security_1 = forms.CharField(label='Answer security 1', widget=forms.TextInput(attrs={'class': 'form-control'}))
     answer_security_2 = forms.CharField(label='Answer security 2', widget=forms.TextInput(attrs={'class': 'form-control'}))
 
+    class Meta:
+        model = CustomUser
+        fields = []
+
     def clean(self):
         cleaned_data = super().clean()
-        username = cleaned_data.get('username')
+        username = self.instance if hasattr(self, 'instance') and hasattr(self.instance, 'username') else None
         answer_security_1 = cleaned_data.get('answer_security_1')
         answer_security_2 = cleaned_data.get('answer_security_2')
 

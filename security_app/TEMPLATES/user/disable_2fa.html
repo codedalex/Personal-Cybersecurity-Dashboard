@@ -5,16 +5,9 @@
 {% block content %}
   <h1 class="text-center">Disable Two-Factor Authentication</h1>
   <div class="col-4 offset-4">
-  <form method="post">
-    {% csrf_token %}
-    <div class="form-group">
-      <label for="security_question_1_answer">Security Question 1 Answer:</label>
-      <input type="text" class="form-control" id="security_question_1_answer" name="security_question_1_answer" required>
-    </div>
-    <div class="form-group">
-      <label for="security_question_2_answer">Security Question 2 Answer:</label>
-      <input type="text" class="form-control" id="security_question_2_answer" name="security_question_2_answer" required>
-    </div>
+    <form method="post" action="{% url 'disable_2fa' %}">
+      {% csrf_token %}
+      {{ form.as_p }}
     <button type="submit" class="btn btn-danger">Disable 2FA</button>
     <a href="{% url 'login' %}" class="btn btn-warning">Cancel</a>
   </form>
