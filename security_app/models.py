@@ -147,6 +147,10 @@ class CustomUser(AbstractUser):
         # self.groups.add(group)
 
 
+# class LoginDetail(models.Model):
+#     """Stores login details for a User model instance."""
+#     user = models.ForeignKey(get_user_model(), on_delete)
+
 @receiver(user_logged_in)
 def user_logged_in_handler(sender, request, user, **kwargs):
     # Increament Login attempts on each Login

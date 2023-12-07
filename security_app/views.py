@@ -48,18 +48,18 @@ def accounts_home(request, user_id=None):
             # Check if the email is confirmed
             if not user.email_confirmed:
                 # Redirect to email confirmation pending if email is not confirmed
-                return render(request, 'email_confirmation_pending.html', {'user_id': user_id})
+                return render(request, 'authentication/email_confirmation_pending.html', {'user_id': user_id})
 
             # Check if the phone number is confirmed
             # if not user.phone_number_verified:
             #     # Redirect to phone number confirmation if phone number is not confirmed
             #     return render(request, 'phone_confirmation_pending.html', {'user_id': user_id})
 
-            # Both email and phone number are confirmed, render user accounts home
-            return render(request, 'accounts_home.html', {'user': user})
+            # render user accounts home
+            return render(request, 'accounts_home.html', {'user': request.user})
             
         else:
-            # If user_id is not provided in the URL, redirect to an appropriate page or show an error
+            # redirect to an appropriate page or show an error
             messages.error(request, 'User ID not provided in the URL.')
             return HttpResponse('User ID not provided in the URL.')
     else:
@@ -67,29 +67,38 @@ def accounts_home(request, user_id=None):
 
 
 def register(request):
+    """Handles user registration process."""
+
     if request.method == 'POST':
+        """User submitted registration form."""
         form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
+            """Form data is valid, create user account."""
             user = form.save()
 
+            """Send confirmation email to user."""
             current_site = get_current_site(request)
             subject = "Activate Your Account"
             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
-            message = render_to_string('confirmation_email.html', {
+            message = render_to_string('registration/confirmation_email.html', {
                 'user': user,
                 'domain': current_site.domain,
                 'uidb64': uidb64,
                 'token': token,
             })
+
             user.email_user(subject, message)
 
-
+            """Redirect user to confirmation page."""
             messages.success(request, "Account created successfully. Please check your email to confirm.")
             return redirect('email_confirmation_pending', uidb64=uidb64, user_id=user.id)
     else:
+        """User request is GET, create empty registration form."""
         form = CustomUserCreationForm()
-    return render(request, 'register.html', {'form': form})
+
+    """Render registration form to user."""
+    return render(request, 'registration/register.html', {'form': form})
 
 
 def confirm_email(request, uidb64, token):
@@ -118,7 +127,7 @@ def confirm_email(request, uidb64, token):
 
 def email_confirmation_success(request, user_id):
     user = get_object_or_404(CustomUser, id=user_id)
-    return render(request, 'email_confirmation_success.html', {'user': user})
+    return render(request, 'authentication/email_confirmation_success.html', {'user': user})
 
 
 def email_confirmation_pending(request, uidb64, user_id=None):
@@ -130,12 +139,12 @@ def email_confirmation_pending(request, uidb64, user_id=None):
         return redirect('login')
     else:
         # if the email is not confirmed, render the pending template
-        return render(request, 'email_confirmation_pending.html', {'user_id': user_id})
+        return render(request, 'authentication/email_confirmation_pending.html', {'user_id': user_id})
 
 
 
 def invalid_confirmation_link(request):
-    return render(request,'invalid_confirmation_link.html')
+    return render(request,'auhentication/invalid_confirmation_link.html')
 
 # @login_required
 def send_sms_verification(request, user_id):
@@ -149,7 +158,7 @@ def send_sms_verification(request, user_id):
     send_sms_verification_code(user.phone_number, user.id)
 
     messages.success(request, 'SMS verification code sent. Please check your phone.')
-    return render(request, 'sms_verification.html', {'user': user})
+    return render(request, 'authentication/sms_verification.html', {'user': user})
 
 # @login_required
 def verify_sms_code(request, user_id):
@@ -167,7 +176,7 @@ def verify_sms_code(request, user_id):
             return render(request, 'accounts_home.html', {'user': user})
         else:
             messages.error(request, 'Invalid verification code.')
-    return render(request, 'verify_sms_code.html', {'user': user})
+    return render(request, 'authenticaion/verify_sms_code.html', {'user': user})
 
 class CustomPasswordResetView(PasswordResetView):
     form_class = CustomPasswordResetForm
@@ -189,11 +198,13 @@ class CustomLogin(auth_views.LoginView):
                 auth_login(request, user)
                 messages.success(request, 'Login successful!')
 
-                if request.user.is_authenticated and request.user.is_2fa_enabled:
-                    return redirect(reverse('enter_2fa_code'))
-                else:
-                    print("2FA not enabled, redirecting to accounts_home directly.")
-                    return redirect(reverse('accounts_home', kwargs={'user_id': user.id}))
+                if request.user.is_authenticated:
+                    if request.user.is_2fa_enabled:
+                        return redirect(reverse('enter_2fa_code', kwargs={'user_id': user.id}))
+                    else:
+                        print("2FA not enabled, redirecting to accounts_home directly.")
+                        return redirect(reverse('accounts_home', kwargs={'user_id': user.id}))
+
 
             else:
                 print(f"Authentication failed for user: {username}")
@@ -234,7 +245,7 @@ def create_profile(request, user_id):
             return render(request, 'accounts_home.html', {'user': user})
     else:
         form = UserProfileForm(instance=user)
-    return render(request, 'create_profile.html', {'form': form})
+    return render(request, 'user/create_profile.html', {'form': form})
 
 @login_required
 def update_profile(request, user_id):
@@ -250,13 +261,13 @@ def update_profile(request, user_id):
     else:
         form = UserProfileForm(instance=user)
 
-    return render(request, 'update_profile.html', {'form': form})
+    return render(request, 'user/update_profile.html', {'form': form})
 
 # @login_required
 class UserProfileDeleteView(DeleteView):
     model = CustomUser
     success_url = reverse_lazy('accounts_home')
-    template_name = 'profile_delete_confirm.html'
+    template_name = 'user/profile_delete_confirm.html'
 
     def get_object(self, queryset=None):
         return self.request.user
@@ -275,7 +286,7 @@ def set_security_questions(request, user_id):
     else:
         form1 = SecurityQuestionForm()
 
-    return render(request, 'Set_security_questions.html', {'form': form1})
+    return render(request, 'authentication/Set_security_questions.html', {'form': form1})
 
 @csrf_protect
 def forgot_password(request):
@@ -306,7 +317,7 @@ def forgot_password(request):
     else:
         form = SecurityAnswerForm()
 
-    return render(request, 'forgot_password.html', {'form': form})
+    return render(request, 'user/forgot_password.html', {'form': form})
 
     
 
@@ -335,7 +346,7 @@ def reset_password(request, uidb64, token):
                 return render(request, 'password_reset_done.html')
         else:
             form = CustomPasswordResetForm(user, initial={'user': user})  # Pass user=user here
-        return render(request, 'reset_password.html', {'form': form, 'uidb64': uidb64, 'token': token})
+        return render(request, 'user/reset_password.html', {'form': form, 'uidb64': uidb64, 'token': token})
 
     else:
         messages.error(request, 'Invalid reset link.')
@@ -343,7 +354,7 @@ def reset_password(request, uidb64, token):
 
 
 @login_required
-def enable_2fa(request):
+def enable_2fa(request, user_id):
     user = request.user
 
     # Check if 2FA is already enabled
@@ -371,7 +382,7 @@ def enable_2fa(request):
         box_size=10,
         border=4,
     )
-    totp_secret = request.session.get('totp_secret', '')
+    # totp_secret = request.session.get('totp_secret', '')
     img_qr = qrcode.make(totp_secret)
     img_qr = img_qr.resize((300, 300))  # adjust the size accordingly
 
@@ -413,10 +424,13 @@ def enable_2fa(request):
     user.security_questions_answered = True
     user.save()
 
-    return render(request, 'enable_2fa.html', context)
+    if not (user.security_question_1 and user.security_question_2):
+        return redirect('set_security_questions', user_id=user.id)
+    else:
+        return render(request, 'user/enable_2fa.html', context)
 
 
-def enter_2fa_code(request):
+def enter_2fa_code(request, user_id):
     user = request.user
 
     # Check if 2FA is enabled for the user
@@ -434,7 +448,7 @@ def enter_2fa_code(request):
             return redirect('accounts_home', user_id=request.user.id)
         else:
             messages.error(request, 'Invalid 2FA code. Please try again.')
-    return render(request, 'enter_2fa_code.html')
+    return render(request, 'user/enter_2fa_code.html', {'user':user})
 
 @login_required
 def verify_2fa_code(request):
@@ -453,7 +467,7 @@ def verify_2fa_code(request):
 
         # If none of the TOTPDevices had a valid code
         messages.error(request, 'Invalid Verification code. Please try again.')
-        return render(request, 'verify_2fa_code.html')
+        return render(request, 'user/verify_2fa_code.html')
 
     return redirect('accounts_home')
 @login_required
@@ -477,7 +491,7 @@ def disable_2fa(request):
             return redirect('login')
         else:
             messages.error(request, 'Incorect Answers')
-    return render(request, 'disable_2fa.html', {'user': user})
+    return render(request, 'user/disable_2fa.html', {'user': user})
 
 @login_required
 def dashboard(request):

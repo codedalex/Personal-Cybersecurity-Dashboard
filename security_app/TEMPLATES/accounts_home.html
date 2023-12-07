@@ -47,7 +47,7 @@
         <button class="btn btn-primary" type="button">Edit</button>
       </a>
       {% if not user.is_2fa_enabled %}
-        <a href="{% url 'enable_2fa' %}">
+        <a href="{% url 'enable_2fa' user_id=user.id %}">
           <button class="btn btn-success" type="button">Enable 2FA</button>
         </a>
       {% endif %}
