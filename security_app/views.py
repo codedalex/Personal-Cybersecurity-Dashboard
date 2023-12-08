@@ -22,14 +22,15 @@ from django.core.files.images import ImageFile
 from django.contrib import messages, auth
 from django.contrib.auth.models import User
 from django.template.loader import render_to_string
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth import authenticate,  login as auth_login, logout, get_user_model
-from django.contrib.auth.views import LoginView,LogoutView, PasswordResetView
-from .forms import  CustomUserCreationForm, CustomAuthenticationForm, CustomPasswordResetForm, UserProfileForm, SecurityQuestionForm, SecurityAnswerForm
+from django.contrib.auth.views import LoginView,LogoutView, PasswordResetView, PasswordChangeDoneView, PasswordChangeView
+from .forms import  CustomUserCreationForm, CustomAuthenticationForm, CustomPasswordResetForm, UserProfileForm, SecurityQuestionForm, SecurityAnswerForm, CustomPasswordChangeForm
 from .models import CustomUser, AuditTrail
 from .utils import send_sms_verification_code, parse_user_agent, get_screen_resolution, get_geolocation, generate_device_identifier, get_network_info
 from .validators import calculate_password_strength
@@ -356,6 +357,13 @@ def reset_password(request, uidb64, token):
         messages.error(request, 'Invalid reset link.')
         return redirect('login')
 
+class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    form_class = CustomPasswordChangeForm
+    template_name = 'user/password_change.html'
+    success_url = reverse_lazy('custom_password_change_done')
+
+class CustomPasswordChangeDoneView(PasswordChangeDoneView):
+    template_name = 'user/password_change_done.html'
 
 @login_required
 def enable_2fa(request, user_id):

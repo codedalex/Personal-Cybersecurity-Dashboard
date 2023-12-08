@@ -3,7 +3,7 @@ from django.urls import path, include
 from . import views
 from .views import register, CustomLogoutView, CustomPasswordResetView, accounts_home, CustomLogin, create_profile, UserProfileDeleteView, logout_user, set_security_questions
 from .views import email_confirmation_pending, invalid_confirmation_link, email_confirmation_success, send_sms_verification, verify_sms_code, csrf_failure_view
-from .views import reset_password, forgot_password, confirm_email, verify_2fa_code, enable_2fa, enter_2fa_code, dashboard, update_profile, disable_2fa
+from .views import reset_password, forgot_password, confirm_email, verify_2fa_code, enable_2fa, enter_2fa_code, dashboard, update_profile, disable_2fa, CustomPasswordChangeView, CustomPasswordChangeDoneView
 
 
 handler403 = csrf_failure_view 
@@ -22,6 +22,8 @@ urlpatterns = [
     path('authentication/set_security_questions/<int:user_id>/', set_security_questions, name='set_security_questions'),
     path('user/forgot_password/', forgot_password, name='forgot_password'),
     path('user/reset_password/<str:uidb64>/<str:token>/', reset_password, name='reset_password'),
+    path('user/password_change/', CustomPasswordChangeView.as_view(), name='password_change'),
+    path('user/password_change/done/', CustomPasswordChangeDoneView.as_view(), name='custom_password_change_done'),
     path('registration/confirm_email/<str:uidb64>/<str:token>/', confirm_email, name='confirm_email'),
     path('user/enable_2fa/<int:user_id>/', enable_2fa, name='enable_2fa'),
     path('authentication/verify_2fa_code/', verify_2fa_code, name='verify_2fa_code'),

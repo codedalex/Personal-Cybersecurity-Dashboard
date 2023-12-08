@@ -51,9 +51,17 @@
           <button class="btn btn-success" type="button">Enable 2FA</button>
         </a>
       {% endif %}
+      {% if user.is_2fa_enabled %}
+        <a href="{% url 'Disable_2fa' ">
+          <button class="btn btn-success" type="button">disable 2FA</button>
+        </a>
+      {% endif %}
       <!-- Button to redirect to dashboard.html -->
       <a href="{% url 'dashboard' %}">
         <button class="btn btn-info" type="button">Go to Dashboard</button>
+      </a>
+      <a href="{% url 'password_change' %}">
+        <button class="btn btn-info" type="button">Change Password</button>
       </a>
     </div>
   {{% else %}
