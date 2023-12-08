@@ -1,0 +1,75 @@
+<!-- accounts_home.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+  {% if user.is_authenticated %}
+    <h1 class="text-center">{{ user.username }} profile</h1>
+    <div class="col-8 offset-2">
+      <table class="table table-bordered">
+        <tbody>
+          <tr>
+            <th>Name</th>
+            <td>{{ user.first_name }} {{ user.last_name }}</td>
+          </tr>
+          <tr>
+            <th>Email</th>
+            <td>{{ user.email }}</td>
+          </tr>
+          <tr>
+            <th>Country</th>
+            <td>{{ user.country }}</td>
+          </tr>
+          <tr>
+            <th>State</th>
+            <td>{{ user.state }}</td>
+          </tr>
+          <tr>
+            <th>City</th>
+            <td>{{ user.city }}</td>
+          </tr>
+          <tr>
+            <th>Zip Code</th>
+            <td>{{ user.zipcode }}</td>
+          </tr>
+          <tr>
+            <th>Primary Address</th>
+            <td>{{ user.address1 }}</td>
+          </tr>
+          <tr>
+            <th>Secondary Address</th>
+            <td>{{ user.address2 }}</td>
+          </tr>
+          <!-- Add other user information fields as needed -->
+        </tbody>
+      </table>
+      <a href="{% url 'update_profile' user_id=user.id %}">
+        <button class="btn btn-primary" type="button">Edit</button>
+      </a>
+      {% if not user.is_2fa_enabled %}
+        <a href="{% url 'enable_2fa' user_id=user.id %}">
+          <button class="btn btn-success" type="button">Enable 2FA</button>
+        </a>
+      {% endif %}
+      {% if user.is_2fa_enabled %}
+        <a href="{% url 'disable_2fa' %}">
+          <button class="btn btn-danger" type="button">Disable 2FA</button>
+        </a>
+      {% endif %}
+      <a href="{% url 'password_change' %}">
+        <button class="btn btn-info" type="button">Change Password</button>
+      </a>
+      <!-- Button to redirect to dashboard.html -->
+      <a href="{% url 'dashboard' %}">
+        <button class="btn btn-info" type="button">Go to Dashboard</button>
+      </a>
+    </div>
+  {{% else %}
+    <script>
+      window.location.href = "{% url 'register' %}";
+    </script>
+  {% endif %}
+{% endblock content %}
+
+
+

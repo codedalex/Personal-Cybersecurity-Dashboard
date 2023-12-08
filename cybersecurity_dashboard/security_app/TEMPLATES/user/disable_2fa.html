@@ -1,0 +1,15 @@
+<!-- disable_2fa.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+  <h1 class="text-center">Disable Two-Factor Authentication</h1>
+  <div class="col-4 offset-4">
+    <form method="post" action="{% url 'disable_2fa' %}">
+      {% csrf_token %}
+      {{ form.as_p }}
+    <button type="submit" class="btn btn-danger">Disable 2FA</button>
+    <a href="{% url 'login' %}" class="btn btn-warning">Cancel</a>
+  </form>
+ </div>
+{% endblock %}  

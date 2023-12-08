@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+  <div class="col-6 offset-3">
+    <h2 class="text-center">Verify Two-Factor Authentication</h2>
+    <form method="post">
+      {% csrf_token %}
+      <label for="verification_code">Enter the verification code from your authenticator app:</label>
+      <input type="text" name="verification_code" required>
+      <button type="submit">Verify and Enable 2FA</button>
+    </form>
+  </div>
+{% endblock content %}

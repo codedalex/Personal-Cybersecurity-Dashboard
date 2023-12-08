@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+  <div class="col-6 offset-3">
+    <h2 class="text-center">Enable Two-Factor Authentication</h2>
+    <p>Follow the steps below to enable Two-Factor Authentication:</p>
+    <ol>
+      <li>Scan the QR code below with your authenticator app:</li>
+      <img src="{{ totp_secret }}" alt="QR Code"><br>
+      <br><li>Alternatively, copy and paste the following key: <code>{{ actual_totp_secret }}</code></li>
+    </ol>
+    <form method="post" action="{% url 'verify_2fa_code' %}">
+      {% csrf_token %}
+      <label for="verification_code">Enter the verification code from your authenticator app:</label><br>
+      <input type="text" name="verification_code" required><br>
+      <br><button type="submit">Verify and Enable 2FA</button>
+    </form>
+  </div><br>
+{% endblock content %}
+
+
+
+

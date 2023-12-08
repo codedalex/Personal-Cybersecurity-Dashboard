@@ -1,0 +1,19 @@
+
+
+
+<!-- enter_2fa_code.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+  <h2>Enter 2FA Code</h2>
+  <form method="post" action="{% url 'verify_2fa_code' %}">
+    {% csrf_token %}
+    <label for="verification_code">Enter 2FA Code:</label>
+    <input type="text" name="verification_code" required>
+    <button type="submit">Submit</button>
+  </form>
+{% endblock %}
+
+
+

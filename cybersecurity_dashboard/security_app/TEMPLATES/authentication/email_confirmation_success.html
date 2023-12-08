@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container">
+        <h2>Email Confirmation Successful</h2>
+        {% if user.id %}
+            <a href="{% url 'send_sms_verification' user_id=user.id %}">
+                <button class="btn btn-info" type="button">Verify Phone</button>
+            </a>
+        {% endif %}
+
+        <!-- Add any additional content or styling as needed -->
+    </div>
+{% endblock %}
+
+
