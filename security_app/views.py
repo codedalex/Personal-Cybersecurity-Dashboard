@@ -11,6 +11,7 @@ from django.views.generic.edit import DeleteView
 from django.core.mail import send_mail
 from django.core.files import File
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from pathlib import Path
 import base64, logging, qrcode, os
 from django.utils import timezone
@@ -76,6 +77,13 @@ def register(request):
         if form.is_valid():
             """Form data is valid, create user account."""
             user = form.save()
+
+            # Calculate password strength
+            password_strength = calculate_password_strength(form.cleaned_data['password1'])
+
+            # Set password strength for the user
+            user.password_strength = password_strength
+            user.save()
 
             """Send confirmation email to user."""
             current_site = get_current_site(request)
@@ -298,7 +306,9 @@ def forgot_password(request):
     if request.method == "POST":
         form = SecurityAnswerForm(request.POST)
         if form.is_valid():
-            user = form.get_user()
+            username = form.cleaned_data.get('username')
+            user = get_object_or_404(CustomUser, username__iexact=username)
+            
             if user:
                 # User and security answers are correct
                 # Generate a reset token and send an email with a reset link
@@ -348,7 +358,7 @@ def reset_password(request, uidb64, token):
                 user.password = make_password(form.cleaned_data['password1'])
                 user.save()
 
-                return render(request, 'password_reset_done.html')
+                return render(request, 'user/password_reset_done.html')
         else:
             form = CustomPasswordResetForm(user, initial={'user': user})  # Pass user=user here
         return render(request, 'user/reset_password.html', {'form': form, 'uidb64': uidb64, 'token': token})
@@ -361,6 +371,19 @@ class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
     form_class = CustomPasswordChangeForm
     template_name = 'user/password_change.html'
     success_url = reverse_lazy('custom_password_change_done')
+
+    def form_invalid(self, form):
+        response = super().form_valid(form)
+
+        # Calculate password strength
+        password_strength = calculate_password_strength(form.cleaned_data['new_password1'])
+
+        # Set password strength for the user
+        self.request.user.password_strength = password_strength
+        self.request.user.save()
+
+        messages.success(self.request, 'Password Changed Successfully.')
+        return response
 
 class CustomPasswordChangeDoneView(PasswordChangeDoneView):
     template_name = 'user/password_change_done.html'

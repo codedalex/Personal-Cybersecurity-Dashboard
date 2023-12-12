@@ -4,7 +4,7 @@
 
 {% block content %}
   {% if user.is_authenticated %}
-    <h1 class="text-center">{{ user.username }} Dashboard</h1>
+    <h1 class="text-center">{{ user.username }} Profile</h1>
     <div class="col-8 offset-2">
       <table class="table table-bordered">
         <tbody>
@@ -44,7 +44,7 @@
         </tbody>
       </table>
       <a href="{% url 'update_profile' user_id=user.id %}">
-        <button class="btn btn-primary" type="button">Edit</button>
+        <button class="btn btn-primary" type="button">Edit Profile</button>
       </a>
       {% if not user.is_2fa_enabled %}
         <a href="{% url 'enable_2fa' user_id=user.id %}">
@@ -58,13 +58,18 @@
       {% endif %}
       <!-- Button to redirect to dashboard.html -->
       <a href="{% url 'dashboard' %}">
-        <button class="btn btn-info" type="button">Go to Dashboard</button>
+        <button class="btn btn-info" type="button">Your Dashboard</button>
       </a>
       <a href="{% url 'password_change' %}">
         <button class="btn btn-info" type="button">Change Password</button>
       </a>
+      {% if not user.is_2fa_enabled %}
+        <a href="{% url 'set_security_questions' user_id=user.id %}">
+          <button class="btn btn-success" type="button">Set Security Questions</button>
+        </a>
+      {% endif %}
     </div>
-  {{% else %}
+  {% else %}
     <script>
       window.location.href = "{% url 'register' %}";
     </script>

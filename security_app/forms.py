@@ -3,7 +3,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm, PasswordResetForm, UserChangeForm, PasswordChangeForm
 from .models import CustomUser
-
+from django.db.models import Q
 
 class CustomUserCreationForm(UserCreationForm):
     # name=forms.CharField(label='Name', widget=forms.TextInput(attrs={'class':'form-control'}))
@@ -27,7 +27,7 @@ class UserProfileForm(forms.ModelForm):
     city=forms.CharField(label='City', widget=forms.TextInput(attrs={'class':'form-control'}))
     zipcode=forms.CharField(label='Zipcode', widget=forms.TextInput(attrs={'class':'form-control'}))
     address1=forms.CharField(label='Primary Address', widget=forms.TextInput(attrs={'class':'form-control'}))
-    address2=forms.CharField(label='Secondary Address', widget=forms.TextInput(attrs={'class':'form-control'}))
+    address2=forms.CharField(label='Secondary Address', required=False, widget=forms.TextInput(attrs={'class':'form-control'}))
     profile_picture=forms.ImageField(label='profile_image', required=False)
 
 
@@ -63,18 +63,15 @@ class SecurityQuestionForm(forms.ModelForm):
         self.fields['security_question_2'].widget = forms.Select(choices=security_questions_choices)
 
 
-class SecurityAnswerForm(forms.ModelForm):
-    # username = forms.CharField(label='Username', widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+class SecurityAnswerForm(forms.Form):
+    username = forms.CharField(label='Username', widget=forms.TextInput(attrs={'class': 'form-control'}))
     answer_security_1 = forms.CharField(label='Answer security 1', widget=forms.TextInput(attrs={'class': 'form-control'}))
     answer_security_2 = forms.CharField(label='Answer security 2', widget=forms.TextInput(attrs={'class': 'form-control'}))
 
-    class Meta:
-        model = CustomUser
-        fields = []
-
     def clean(self):
         cleaned_data = super().clean()
-        username = self.instance if hasattr(self, 'instance') and hasattr(self.instance, 'username') else None
+        username = cleaned_data.get('username')
         answer_security_1 = cleaned_data.get('answer_security_1')
         answer_security_2 = cleaned_data.get('answer_security_2')
 
