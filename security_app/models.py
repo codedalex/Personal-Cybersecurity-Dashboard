@@ -51,7 +51,19 @@ class CustomUser(AbstractUser):
     phone_number_verified = models.BooleanField(default=False)
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)
     last_login_timestamp = models.DateTimeField(blank=True, null=True)
-    
+    SECURITY_QUESTION_CHOICES = [
+        ('favorite_color', 'What is your favorite color?'),
+        ('first_pet', 'What was the name of your first pet?'),
+        ('birth_city', 'In which city were you born?'),
+        ('favorite_book', 'What is your favorite book?'),
+        ('high_school', 'Which high school did you attend?'),
+    ]
+
+    security_question_1 = models.CharField(max_length=255, choices=SECURITY_QUESTION_CHOICES, blank=True, null=True)
+    answer_security_1 = models.CharField(max_length=255, blank=True, null=True)
+    security_question_2 = models.CharField(max_length=255, choices=SECURITY_QUESTION_CHOICES, blank=True, null=True)
+    answer_security_2 = models.CharField(max_length=255, blank=True, null=True)
+
     
     # Dashboard-related fields
     password_strength = models.IntegerField(default=0, help_text="Strength of the user's password.")

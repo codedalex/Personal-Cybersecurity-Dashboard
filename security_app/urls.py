@@ -2,7 +2,7 @@
 from django.urls import path, include
 from . import views
 from .views import register, CustomLogoutView, CustomPasswordResetView, accounts_home, CustomLogin, create_profile, UserProfileDeleteView, logout_user, set_security_questions
-from .views import email_confirmation_pending, invalid_confirmation_link, email_confirmation_success, send_sms_verification, verify_sms_code, csrf_failure_view
+from .views import email_confirmation_pending, invalid_confirmation_link, email_confirmation_success, send_sms_verification, verify_sms_code, csrf_failure_view, answer_security_questions
 from .views import reset_password, forgot_password, confirm_email, verify_2fa_code, enable_2fa, enter_2fa_code, dashboard, update_profile, disable_2fa, CustomPasswordChangeView, CustomPasswordChangeDoneView
 
 
@@ -21,6 +21,7 @@ urlpatterns = [
     path('user/profile_delete/<int:user_id>/', UserProfileDeleteView.as_view(), name='profile_delete'),
     path('authentication/set_security_questions/<int:user_id>/', set_security_questions, name='set_security_questions'),
     path('user/forgot_password/', forgot_password, name='forgot_password'),
+    path('answer_security_questions/', answer_security_questions, name='answer_security_questions'),
     path('user/reset_password/<str:uidb64>/<str:token>/', reset_password, name='reset_password'),
     path('user/password_change/', CustomPasswordChangeView.as_view(), name='password_change'),
     path('user/password_change/done/', CustomPasswordChangeDoneView.as_view(), name='custom_password_change_done'),

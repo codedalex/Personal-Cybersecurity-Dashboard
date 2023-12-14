@@ -2,6 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from security_app.models import CustomUser, SecurityGroup, AuditTrail
 from django_otp.plugins.otp_totp.models import TOTPDevice
+from django.template.response import TemplateResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect
 from django.urls import reverse_lazy, reverse
@@ -31,7 +32,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth import authenticate,  login as auth_login, logout, get_user_model
 from django.contrib.auth.views import LoginView,LogoutView, PasswordResetView, PasswordChangeDoneView, PasswordChangeView
-from .forms import  CustomUserCreationForm, CustomAuthenticationForm, CustomPasswordResetForm, UserProfileForm, SecurityQuestionForm, SecurityAnswerForm, CustomPasswordChangeForm
+from .forms import  CustomUserCreationForm, CustomAuthenticationForm, CustomPasswordResetForm, UserProfileForm, SecurityQuestionForm, SecurityAnswerForm, CustomPasswordChangeForm, EmailForm
 from .models import CustomUser, AuditTrail
 from .utils import send_sms_verification_code, parse_user_agent, get_screen_resolution, get_geolocation, generate_device_identifier, get_network_info
 from .validators import calculate_password_strength
@@ -301,40 +302,102 @@ def set_security_questions(request, user_id):
 
     return render(request, 'authentication/Set_security_questions.html', {'form': form1})
 
+
 @csrf_protect
 def forgot_password(request):
-    if request.method == "POST":
-        form = SecurityAnswerForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-            user = get_object_or_404(CustomUser, username__iexact=username)
-            
-            if user:
-                # User and security answers are correct
-                # Generate a reset token and send an email with a reset link
-                uid = urlsafe_base64_encode(force_bytes(user.pk))
-                token = default_token_generator.make_token(user)
-                reset_url = reverse('reset_password', kwargs={'uidb64': uid, 'token': token})
+    email_form = EmailForm(request.POST or None)
+    security_form = None
 
-                # Send a password reset email
-                send_mail(
-                    'Password Reset',
-                    f'Use the following link to reset your password: {request.build_absolute_uri(reset_url)}',
-                    'alexmutonga3@gmail.com',  # Replace with your email
-                    [user.email],
-                    fail_silently=False,
-                )
+    if request.method == "POST" and 'email' in request.POST:
+        if email_form.is_valid():
+            email = email_form.cleaned_data.get('email')
+            print(f"Debug: Email '{email_form.cleaned_data['email']}' is valid.")
 
-                messages.success(request, 'Password reset link has been sent to your email.')
-                return redirect('login')
-            else:
-                messages.error(request, 'Invalid security answers. Please try again.')
-    else:
-        form = SecurityAnswerForm()
+            # Retrieve the user object based on the email
+            try:
+                user = CustomUser.objects.get(email=email)
+                print(f"Debug: User found - {user.username}")
 
-    return render(request, 'user/forgot_password.html', {'form': form})
+                # Store the user ID in the session
+                request.session['reset_user_id'] = user.id
+                request.session['reset_email'] = email 
+                print(f"Debug: Email stored in session - {request.session.get('reset_email')}")
 
+                # Redirect to answer security questions with user ID in the URL
+                return redirect(reverse('answer_security_questions') + f'?user_id={user.id}')
+
+            except CustomUser.DoesNotExist:
+                print("Debug: User not found.")
+                messages.error(request, 'User not found.')
+                return redirect('forgot_password')
+
+    return render(request, 'user/forgot_password.html', {'email_form': email_form})
+
+@csrf_protect
+def answer_security_questions(request):
+    # Retrieve the user ID from the URL
+    user_id_from_url = request.GET.get('user_id')
+
+    # Check if user ID is available in the URL
+    if not user_id_from_url:
+        messages.error(request, 'User ID not found in the URL.')
+        return redirect('forgot_password')
+
+    # Retrieve the email from the session
+    print(f"Debug: User ID from URL - {user_id_from_url}")
+    print(f"Debug: Email retrieved from session - {request.session.get('reset_email')}")
+    email = request.session.get('reset_email')
     
+    if not email:
+        # Handle the case where the email is not in the session
+        messages.error(request, 'Email not found in session.')
+        return redirect('forgot_password')
+
+    # Print or log the user_id to check if it's correct
+    print(f"Debug: User ID from URL - {user_id_from_url}")
+
+    # Access user based on user ID
+    user = get_object_or_404(CustomUser, id=user_id_from_url)
+    security_form = SecurityAnswerForm(user=user, data=request.POST or None)
+
+    if request.method == "POST":
+        print(f"Debug: POST request received. Form data - {request.POST}")
+        if security_form.is_valid():
+            # User and security answers are correct
+            # Generate a reset token and send an email with a reset link
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_url = reverse('reset_password', kwargs={'uidb64': uid, 'token': token})
+
+            # Send a password reset email
+            send_mail(
+                'Password Reset',
+                f'Use the following link to reset your password: {request.build_absolute_uri(reset_url)}',
+                'alexmutonga3@gmail.com',  # Replace with your email
+                [user.email],
+                fail_silently=False,
+            )
+            messages.success(request, 'Password reset link has been sent to your email.')
+
+            # Clear the email and user ID from the session
+            del request.session['reset_email']
+
+            return redirect('login')
+        else:
+            print(f"Debug: Form is not valid. Errors - {security_form.errors}")
+
+            # Display form errors to the user
+            if 'answer_security_1' in security_form.errors:
+                messages.error(request, security_form.errors['answer_security_1'])
+            if 'answer_security_2' in security_form.errors:
+                messages.error(request, security_form.errors['answer_security_2'])
+
+            # Pass the form back to the template to display errors
+            context = {'security_form': security_form, 'email': email}
+            return render(request, 'user/answer_security_questions.html', context)
+
+    context = {'security_form': security_form, 'email': email}
+    return render(request, 'user/answer_security_questions.html', context)
 
 
 def reset_password(request, uidb64, token):
