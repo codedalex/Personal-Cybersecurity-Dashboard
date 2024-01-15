@@ -1,0 +1,18 @@
+
+
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="container">
+    <h2>Forgot Security Answers</h2>
+    <p>Provide your username or email to reset security questions:</p>
+
+    <form method="post" action="{% url 'forgot_security_answers' %}">
+      {% csrf_token %}
+      {{ form.as_p }}
+
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+{% endblock %}
+

@@ -1,0 +1,14 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Enter 6-Digit Code</h2>
+  <p>Check your email for the 6-digit code and enter it below:</p>
+
+  <form method="post" action="">
+    {% csrf_token %}
+    <label for="six_digit_code">6-Digit Code:</label>
+    <input type="text" name="six_digit_code" required>
+    <button type="submit">Submit Code</button>
+  </form>
+{% endblock %}

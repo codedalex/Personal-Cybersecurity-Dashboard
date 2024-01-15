@@ -2,6 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from security_app.models import CustomUser, SecurityGroup, AuditTrail
 from django_otp.plugins.otp_totp.models import TOTPDevice
+from django.template.response import TemplateResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect
 from django.urls import reverse_lazy, reverse
@@ -11,28 +12,32 @@ from django.views.generic.edit import DeleteView
 from django.core.mail import send_mail
 from django.core.files import File
 from django.conf import settings
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from pathlib import Path
-import base64, logging, qrcode, os
+import base64, logging, qrcode, os, smtplib, random, string
 from django.utils import timezone
 from django.contrib.auth import views as auth_views
 from PIL import Image, ImageDraw, ImageFont
+from email.mime.text import MIMEText
 from io import BytesIO
 from urllib.parse import parse_qs, urlparse
 from django.core.files.images import ImageFile
 from django.contrib import messages, auth
 from django.contrib.auth.models import User
 from django.template.loader import render_to_string
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth import authenticate,  login as auth_login, logout, get_user_model
-from django.contrib.auth.views import LoginView,LogoutView, PasswordResetView, PasswordChangeView, PasswordChangeDoneView
-from .forms import  CustomUserCreationForm, CustomAuthenticationForm, CustomPasswordResetForm, UserProfileForm, SecurityQuestionForm, SecurityAnswerForm, CustomPasswordChangeForm
-from .models import CustomUser, AuditTrail
+from django.contrib.auth.views import LoginView,LogoutView, PasswordResetView, PasswordChangeDoneView, PasswordChangeView
+from .forms import  CustomUserCreationForm, CustomAuthenticationForm, CustomPasswordResetForm, UserProfileForm, SecurityQuestionForm, SecurityAnswerForm, CustomPasswordChangeForm, EmailForm
+from .models import CustomUser, AuditTrail, UserRequest
 from .utils import send_sms_verification_code, parse_user_agent, get_screen_resolution, get_geolocation, generate_device_identifier, get_network_info
+from .forms import PasswordResetRequestForm, ForgotSecurityAnswersForm, ContactForm
 from .validators import calculate_password_strength
 from django.contrib.auth.hashers import make_password
 
@@ -40,6 +45,39 @@ from django.contrib.auth.hashers import make_password
 
 logger = logging.getLogger(__name__)
 
+
+def send_password_reset_email(user, request):
+    """Send a password reset email to the user."""
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    reset_url = reverse('reset_password', kwargs={'uidb64': uid, 'token': token})
+
+    # Send a password reset email
+    send_mail(
+        'Password Reset',
+        f'Use the following link to reset your password: {request.build_absolute_uri(reset_url)}',
+        'alexmutonga3@gmail.com',  # Replace with your email
+        [user.email],
+        fail_silently=False,
+    )
+
+    messages.success(request, 'Password reset link has been sent to your email.')
+
+
+def generate_six_digit_code():
+    return ''.join(random.choices(string.digits, k=6))
+
+
+def send_code_to_user_email(email, six_digit_code):
+    """Send a verification code to the given email address."""
+    subject = 'Verification Code'
+    message = f'Use the following code to reset your password: {six_digit_code}'
+    from_email = 'alexmutonga3@gmail.com'  # Replace with your email address
+    recipient_list = [email]
+
+    send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+
+    print(f"Sending code {six_digit_code} to {email}")
 def accounts_home(request, user_id=None):
     if request.user.is_authenticated:
         if user_id is not None:
@@ -76,6 +114,13 @@ def register(request):
         if form.is_valid():
             """Form data is valid, create user account."""
             user = form.save()
+
+            # Calculate password strength
+            password_strength = calculate_password_strength(form.cleaned_data['password1'])
+
+            # Set password strength for the user
+            user.password_strength = password_strength
+            user.save()
 
             """Send confirmation email to user."""
             current_site = get_current_site(request)
@@ -293,39 +338,175 @@ def set_security_questions(request, user_id):
 
     return render(request, 'authentication/Set_security_questions.html', {'form': form1})
 
+def forgot_security_answers(request):
+    user = None
+
+    if request.method == 'POST':
+        form = ForgotSecurityAnswersForm(request.POST)
+
+        if form.is_valid():
+            print(f"Debug: Username_or_email '{form.cleaned_data['username_or_email']}' is valid.")
+            username_or_email = form.cleaned_data['username_or_email']
+
+            try:
+                user = CustomUser.objects.get(Q(username=username_or_email) | Q(email=username_or_email))
+            except CustomUser.DoesNotExist:
+                messages.error(request, 'User not found.')
+                return redirect('forgot_security_answers')
+
+            if user is not None and not user.has_security_questions():
+                messages.error(request, 'User does not have security questions set up.')
+                return redirect('login')
+
+            if user is not None:
+                return redirect('contact_customer_care', user_id=user.id)
+    else:
+        form = ForgotSecurityAnswersForm()
+
+    return render(request, 'user/forgot_security_answers.html', {'form': form})
+
+
+
+def contact_customer_care(request, user_id):
+    user = get_object_or_404(CustomUser, id=user_id)
+    form = ContactForm()
+
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            problem_description = form.cleaned_data['problem_description']
+
+            UserRequest.objects.create(user=user, problem_description=problem_description)
+
+            print(f"User {user.username} Requet recieved. Customer care will contact you via email.")
+            print(f"Problem Description: {problem_description}")
+
+            messages.success(request, 'Request recieved. Customer care will contact you via email.')
+            return redirect('login')
+        else:
+            form = ContactForm()
+    return render(request, 'user/contact_customer_care.html', {'user': user, 'form': form})
+
+
+
 @csrf_protect
 def forgot_password(request):
-    if request.method == "POST":
-        form = SecurityAnswerForm(request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            if user:
-                # User and security answers are correct
-                # Generate a reset token and send an email with a reset link
-                uid = urlsafe_base64_encode(force_bytes(user.pk))
-                token = default_token_generator.make_token(user)
-                reset_url = reverse('reset_password', kwargs={'uidb64': uid, 'token': token})
+    email_form = EmailForm(request.POST or None)
+    security_form = None
 
-                # Send a password reset email
-                send_mail(
-                    'Password Reset',
-                    f'Use the following link to reset your password: {request.build_absolute_uri(reset_url)}',
-                    'alexmutonga3@gmail.com',  # Replace with your email
-                    [user.email],
-                    fail_silently=False,
-                )
+    if request.method == "POST" and 'email' in request.POST:
+        if email_form.is_valid():
+            email = email_form.cleaned_data.get('email')
+            print(f"Debug: Email '{email_form.cleaned_data['email']}' is valid.")
 
-                messages.success(request, 'Password reset link has been sent to your email.')
-                return redirect('login')
-            else:
-                messages.error(request, 'Invalid security answers. Please try again.')
-    else:
-        form = SecurityAnswerForm()
+            # Retrieve the user object based on the email
+            try:
+                user = CustomUser.objects.get(email=email)
+                print(f"Debug: User found - {user.username}")
 
-    return render(request, 'user/forgot_password.html', {'form': form})
+                # Store the user ID in the session
+                request.session['reset_user_id'] = user.id
+                request.session['reset_email'] = email 
+                print(f"Debug: Email stored in session - {request.session.get('reset_email')}")
 
+                # Redirect to answer security questions with user ID in the URL
+                return redirect(reverse('answer_security_questions') + f'?user_id={user.id}')
+
+            except CustomUser.DoesNotExist:
+                print("Debug: User not found.")
+                messages.error(request, 'User not found.')
+                return redirect('forgot_password')
+
+    return render(request, 'user/forgot_password.html', {'email_form': email_form})
+
+@csrf_protect
+def answer_security_questions(request):
+    # Retrieve the user ID from the URL
+    user_id_from_url = request.GET.get('user_id')
+
+    # Check if user ID is available in the URL
+    if not user_id_from_url:
+        messages.error(request, 'User ID not found in the URL.')
+        return redirect('forgot_password')
+
+    # Retrieve the email from the session
+    print(f"Debug: User ID from URL - {user_id_from_url}")
+    print(f"Debug: Email retrieved from session - {request.session.get('reset_email')}")
+    email = request.session.get('reset_email')
     
+    if not email:
+        # Handle the case where the email is not in the session
+        messages.error(request, 'Email not found in session.')
+        return redirect('forgot_password')
 
+    # Print or log the user_id to check if it's correct
+    print(f"Debug: User ID from URL - {user_id_from_url}")
+
+    # Access user based on user ID
+    user = get_object_or_404(CustomUser, id=user_id_from_url)
+
+    if not user.has_security_questions():
+        six_digit_code = generate_six_digit_code()
+        request.session['six_digit_code'] = six_digit_code
+        send_code_to_user_email(user.email, six_digit_code)
+
+        return redirect(reverse('enter_code') + f'?user_id={user.id}')
+
+    security_form = SecurityAnswerForm(user=user, data=request.POST or None)
+
+    if request.method == "POST":
+        print(f"Debug: POST request received. Form data - {request.POST}")
+        if security_form.is_valid():
+
+            # Send a password reset email
+            send_password_reset_email(user, request)
+
+            messages.success(request, 'Password reset link has been sent to your email.')
+
+            # Clear the email and user ID from the session
+            del request.session['reset_email']
+
+            return redirect('login')
+        else:
+            print(f"Debug: Form is not valid. Errors - {security_form.errors}")
+
+            # Display form errors to the user
+            if 'answer_security_1' in security_form.errors:
+                messages.error(request, security_form.errors['answer_security_1'])
+            if 'answer_security_2' in security_form.errors:
+                messages.error(request, security_form.errors['answer_security_2'])
+
+            # Pass the form back to the template to display errors
+            context = {'security_form': security_form, 'email': email}
+            return render(request, 'user/answer_security_questions.html', context)
+
+    context = {'security_form': security_form, 'email': email}
+    return render(request, 'user/answer_security_questions.html', context)
+
+  
+@csrf_protect
+def enter_code(request):
+    user_id_from_url = request.GET.get('user_id')
+    user = get_object_or_404(CustomUser, id=user_id_from_url)
+
+    if request.method == 'POST':
+        entered_code = request.POST.get('six_digit_code')
+        token = request.COOKIES.get("token")
+        stored_code = request.session.get('six_digit_code')
+
+        if entered_code == stored_code:
+            # Code is correct, proceed to password reset logic
+            del request.session['six_digit_code']
+
+            # Send a password reset email
+            send_password_reset_email(user, request)
+            
+            messages.success(request, 'Password reset link has been sent to your email.')
+            return redirect('login')
+        else:
+            messages.error(request, 'Incorrect code. Please try again.')
+
+    return render(request, 'user/enter_code.html', {'user': user})
 
 def reset_password(request, uidb64, token):
     try:
@@ -348,7 +529,7 @@ def reset_password(request, uidb64, token):
                 user.password = make_password(form.cleaned_data['password1'])
                 user.save()
 
-                return render(request, 'password_reset_done.html')
+                return render(request, 'user/password_reset_done.html')
         else:
             form = CustomPasswordResetForm(user, initial={'user': user})  # Pass user=user here
         return render(request, 'user/reset_password.html', {'form': form, 'uidb64': uidb64, 'token': token})
@@ -361,6 +542,19 @@ class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
     form_class = CustomPasswordChangeForm
     template_name = 'user/password_change.html'
     success_url = reverse_lazy('custom_password_change_done')
+
+    def form_invalid(self, form):
+        response = super().form_valid(form)
+
+        # Calculate password strength
+        password_strength = calculate_password_strength(form.cleaned_data['new_password1'])
+
+        # Set password strength for the user
+        self.request.user.password_strength = password_strength
+        self.request.user.save()
+
+        messages.success(self.request, 'Password Changed Successfully.')
+        return response
 
 class CustomPasswordChangeDoneView(PasswordChangeDoneView):
     template_name = 'user/password_change_done.html'

@@ -1,0 +1,16 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Answer Security Questions ({{ email }}) </h2>
+  <form method="post" action="">
+    {% csrf_token %}
+    {{ security_form.as_p }}
+    <button type="submit">Submit Answers</button>
+  </form><br>
+  <a href="{% url 'forgot_security_answers' %}">
+    <button class="btn btn-success" type="button">Forgot Security Answers</button>
+  </a>
+{% endblock %}
+
+

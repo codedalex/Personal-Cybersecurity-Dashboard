@@ -3,7 +3,7 @@
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, SecurityGroup, AuditTrail
+from .models import CustomUser, SecurityGroup, AuditTrail, UserRequest
 from .forms import CustomUserAdminForm
 
 # Register your models here.
@@ -37,6 +37,7 @@ class CustomUserAdmin(UserAdmin):
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(SecurityGroup)
 admin.site.register(AuditTrail)
+admin.site.register(UserRequest)
 
 
 

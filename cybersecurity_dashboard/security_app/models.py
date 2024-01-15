@@ -51,7 +51,19 @@ class CustomUser(AbstractUser):
     phone_number_verified = models.BooleanField(default=False)
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)
     last_login_timestamp = models.DateTimeField(blank=True, null=True)
-    
+    SECURITY_QUESTION_CHOICES = [
+        ('favorite_color', 'What is your favorite color?'),
+        ('first_pet', 'What was the name of your first pet?'),
+        ('birth_city', 'In which city were you born?'),
+        ('favorite_book', 'What is your favorite book?'),
+        ('high_school', 'Which high school did you attend?'),
+    ]
+
+    security_question_1 = models.CharField(max_length=255, choices=SECURITY_QUESTION_CHOICES, blank=True, null=True)
+    answer_security_1 = models.CharField(max_length=255, blank=True, null=True)
+    security_question_2 = models.CharField(max_length=255, choices=SECURITY_QUESTION_CHOICES, blank=True, null=True)
+    answer_security_2 = models.CharField(max_length=255, blank=True, null=True)
+
     
     # Dashboard-related fields
     password_strength = models.IntegerField(default=0, help_text="Strength of the user's password.")
@@ -145,11 +157,27 @@ class CustomUser(AbstractUser):
         self.user_permissions.add(permission)
         # group, created = Group.objects.get_or_create(name="Default")
         # self.groups.add(group)
+    
+    def has_security_questions(self):
+        return self.answer_security_1 is not None and self.answer_security_2 is not None
+
+    def disable_2fa(self):
+        self.is_2fa_enabled = False
+        self.save()
+
+    def disable_security_questions(self):
+        self.security_question_1 = None
+        self.security_question_2 = None
+        self.answer_security_1 = None
+        self.answer_security_2 = None
+        self.save()
 
 
-# class LoginDetail(models.Model):
-#     """Stores login details for a User model instance."""
-#     user = models.ForeignKey(get_user_model(), on_delete)
+class UserRequest(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    problem_description = models.TextField(default='')
+    resolved = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
 @receiver(user_logged_in)
 def user_logged_in_handler(sender, request, user, **kwargs):

@@ -1,0 +1,20 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Customer care</h2>
+  <p>Welcome to our customer care. Please use the form below to create an assistance token.</p>
+
+  <form method="post" action="{% url 'contact_customer_care' user_id=user.id %}">
+    {% csrf_token %}
+    
+    <!-- Display user information -->
+    <p>User: {{ user.username }}</p>
+
+    <!-- Add form fields for detailed login problem description -->
+    {{ form.as_p }}
+
+    <button type="submit">Submit</button>
+</form>
+ 
+{% endblock %}

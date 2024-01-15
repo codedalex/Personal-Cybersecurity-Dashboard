@@ -173,9 +173,9 @@ MEDIA_URL = "/media/"
 
 # Use the database to store sessions
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-
+SESSION_COOKIE_SECURE = True
 # Read session cookie age from .env file, defaulting to 600 seconds (10 minutes)
-SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=600, cast=int)
+SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=2500, cast=int)
 
 
 
