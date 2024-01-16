@@ -1,4 +1,8 @@
 
+<<<<<<< HEAD:cybersecurity_dashboard/security_app/TEMPLATES/user/answer_security_questions.html
+=======
+
+>>>>>>> 8219dc2fb8b1515a4110d6dfc00a3c69c1873a60:security_app/TEMPLATES/user/answer_security_questions.html
 {% extends 'base.html' %}
 
 {% block content %}
@@ -7,6 +11,7 @@
     {% csrf_token %}
     {{ security_form.as_p }}
     <button type="submit">Submit Answers</button>
+<<<<<<< HEAD:cybersecurity_dashboard/security_app/TEMPLATES/user/answer_security_questions.html
   </form><br>
   <a href="{% url 'forgot_security_answers' %}">
     <button class="btn btn-success" type="button">Forgot Security Answers</button>
@@ -14,3 +19,10 @@
 {% endblock %}
 
 
+=======
+  </form>
+{% endblock %}
+
+
+
+>>>>>>> 8219dc2fb8b1515a4110d6dfc00a3c69c1873a60:security_app/TEMPLATES/user/answer_security_questions.html

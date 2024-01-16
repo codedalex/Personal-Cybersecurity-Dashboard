@@ -12,14 +12,12 @@ from django.views.generic.edit import DeleteView
 from django.core.mail import send_mail
 from django.core.files import File
 from django.conf import settings
-from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from pathlib import Path
-import base64, logging, qrcode, os, smtplib, random, string
+import base64, logging, qrcode, os
 from django.utils import timezone
 from django.contrib.auth import views as auth_views
 from PIL import Image, ImageDraw, ImageFont
-from email.mime.text import MIMEText
 from io import BytesIO
 from urllib.parse import parse_qs, urlparse
 from django.core.files.images import ImageFile
@@ -35,9 +33,8 @@ from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth import authenticate,  login as auth_login, logout, get_user_model
 from django.contrib.auth.views import LoginView,LogoutView, PasswordResetView, PasswordChangeDoneView, PasswordChangeView
 from .forms import  CustomUserCreationForm, CustomAuthenticationForm, CustomPasswordResetForm, UserProfileForm, SecurityQuestionForm, SecurityAnswerForm, CustomPasswordChangeForm, EmailForm
-from .models import CustomUser, AuditTrail, UserRequest
+from .models import CustomUser, AuditTrail
 from .utils import send_sms_verification_code, parse_user_agent, get_screen_resolution, get_geolocation, generate_device_identifier, get_network_info
-from .forms import PasswordResetRequestForm, ForgotSecurityAnswersForm, ContactForm
 from .validators import calculate_password_strength
 from django.contrib.auth.hashers import make_password
 
@@ -45,39 +42,6 @@ from django.contrib.auth.hashers import make_password
 
 logger = logging.getLogger(__name__)
 
-
-def send_password_reset_email(user, request):
-    """Send a password reset email to the user."""
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
-    token = default_token_generator.make_token(user)
-    reset_url = reverse('reset_password', kwargs={'uidb64': uid, 'token': token})
-
-    # Send a password reset email
-    send_mail(
-        'Password Reset',
-        f'Use the following link to reset your password: {request.build_absolute_uri(reset_url)}',
-        'alexmutonga3@gmail.com',  # Replace with your email
-        [user.email],
-        fail_silently=False,
-    )
-
-    messages.success(request, 'Password reset link has been sent to your email.')
-
-
-def generate_six_digit_code():
-    return ''.join(random.choices(string.digits, k=6))
-
-
-def send_code_to_user_email(email, six_digit_code):
-    """Send a verification code to the given email address."""
-    subject = 'Verification Code'
-    message = f'Use the following code to reset your password: {six_digit_code}'
-    from_email = 'alexmutonga3@gmail.com'  # Replace with your email address
-    recipient_list = [email]
-
-    send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-
-    print(f"Sending code {six_digit_code} to {email}")
 def accounts_home(request, user_id=None):
     if request.user.is_authenticated:
         if user_id is not None:
@@ -338,56 +302,6 @@ def set_security_questions(request, user_id):
 
     return render(request, 'authentication/Set_security_questions.html', {'form': form1})
 
-def forgot_security_answers(request):
-    user = None
-
-    if request.method == 'POST':
-        form = ForgotSecurityAnswersForm(request.POST)
-
-        if form.is_valid():
-            print(f"Debug: Username_or_email '{form.cleaned_data['username_or_email']}' is valid.")
-            username_or_email = form.cleaned_data['username_or_email']
-
-            try:
-                user = CustomUser.objects.get(Q(username=username_or_email) | Q(email=username_or_email))
-            except CustomUser.DoesNotExist:
-                messages.error(request, 'User not found.')
-                return redirect('forgot_security_answers')
-
-            if user is not None and not user.has_security_questions():
-                messages.error(request, 'User does not have security questions set up.')
-                return redirect('login')
-
-            if user is not None:
-                return redirect('contact_customer_care', user_id=user.id)
-    else:
-        form = ForgotSecurityAnswersForm()
-
-    return render(request, 'user/forgot_security_answers.html', {'form': form})
-
-
-
-def contact_customer_care(request, user_id):
-    user = get_object_or_404(CustomUser, id=user_id)
-    form = ContactForm()
-
-    if request.method == 'POST':
-        form = ContactForm(request.POST)
-        if form.is_valid():
-            problem_description = form.cleaned_data['problem_description']
-
-            UserRequest.objects.create(user=user, problem_description=problem_description)
-
-            print(f"User {user.username} Requet recieved. Customer care will contact you via email.")
-            print(f"Problem Description: {problem_description}")
-
-            messages.success(request, 'Request recieved. Customer care will contact you via email.')
-            return redirect('login')
-        else:
-            form = ContactForm()
-    return render(request, 'user/contact_customer_care.html', {'user': user, 'form': form})
-
-
 
 @csrf_protect
 def forgot_password(request):
@@ -444,23 +358,25 @@ def answer_security_questions(request):
 
     # Access user based on user ID
     user = get_object_or_404(CustomUser, id=user_id_from_url)
-
-    if not user.has_security_questions():
-        six_digit_code = generate_six_digit_code()
-        request.session['six_digit_code'] = six_digit_code
-        send_code_to_user_email(user.email, six_digit_code)
-
-        return redirect(reverse('enter_code') + f'?user_id={user.id}')
-
     security_form = SecurityAnswerForm(user=user, data=request.POST or None)
 
     if request.method == "POST":
         print(f"Debug: POST request received. Form data - {request.POST}")
         if security_form.is_valid():
+            # User and security answers are correct
+            # Generate a reset token and send an email with a reset link
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_url = reverse('reset_password', kwargs={'uidb64': uid, 'token': token})
 
             # Send a password reset email
-            send_password_reset_email(user, request)
-
+            send_mail(
+                'Password Reset',
+                f'Use the following link to reset your password: {request.build_absolute_uri(reset_url)}',
+                'alexmutonga3@gmail.com',  # Replace with your email
+                [user.email],
+                fail_silently=False,
+            )
             messages.success(request, 'Password reset link has been sent to your email.')
 
             # Clear the email and user ID from the session
@@ -483,30 +399,6 @@ def answer_security_questions(request):
     context = {'security_form': security_form, 'email': email}
     return render(request, 'user/answer_security_questions.html', context)
 
-  
-@csrf_protect
-def enter_code(request):
-    user_id_from_url = request.GET.get('user_id')
-    user = get_object_or_404(CustomUser, id=user_id_from_url)
-
-    if request.method == 'POST':
-        entered_code = request.POST.get('six_digit_code')
-        token = request.COOKIES.get("token")
-        stored_code = request.session.get('six_digit_code')
-
-        if entered_code == stored_code:
-            # Code is correct, proceed to password reset logic
-            del request.session['six_digit_code']
-
-            # Send a password reset email
-            send_password_reset_email(user, request)
-            
-            messages.success(request, 'Password reset link has been sent to your email.')
-            return redirect('login')
-        else:
-            messages.error(request, 'Incorrect code. Please try again.')
-
-    return render(request, 'user/enter_code.html', {'user': user})
 
 def reset_password(request, uidb64, token):
     try:
@@ -807,6 +699,3 @@ def csrf_failure_view(request, reason=""):
     
     # return forbidden HttpResponse with template rendering
     return HttpResponseForbidden(template.render(context, request))
-
-
-
