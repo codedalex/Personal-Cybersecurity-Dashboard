@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Verify SMS Code</h2>
+    <p>Enter the SMS verification code sent to your phone.</p>
+    <!-- Display the form to enter the verification code -->
+    <form method="post" action="{% url 'verify_sms_code' user.id %}">
+        {% csrf_token %}
+        <label for="sms_verification_code">Enter SMS Verification Code:</label>
+        <input type="text" name="sms_verification_code" required>
+        <button type="submit">Verify</button>
+    </form>
+{% endblock %}

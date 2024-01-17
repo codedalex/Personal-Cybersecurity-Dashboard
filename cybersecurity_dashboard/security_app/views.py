@@ -699,3 +699,6 @@ def csrf_failure_view(request, reason=""):
     
     # return forbidden HttpResponse with template rendering
     return HttpResponseForbidden(template.render(context, request))
+
+
+
