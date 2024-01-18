@@ -4,7 +4,7 @@ from . import views
 from .views import register, CustomLogoutView, CustomPasswordResetView, accounts_home, CustomLogin, create_profile, UserProfileDeleteView, logout_user, set_security_questions
 from .views import email_confirmation_pending, invalid_confirmation_link, email_confirmation_success, send_sms_verification, verify_sms_code, csrf_failure_view, answer_security_questions
 from .views import reset_password, forgot_password, confirm_email, verify_2fa_code, enable_2fa, enter_2fa_code, dashboard, update_profile, disable_2fa, CustomPasswordChangeView, CustomPasswordChangeDoneView
-from .views import contact_customer_care, enter_code, forgot_security_answers
+from .views import contact_customer_care, enter_code, forgot_security_answers, resolve_user_requests, resolve_request
 
 handler403 = csrf_failure_view 
 
@@ -40,6 +40,8 @@ urlpatterns = [
     path('authentication/email-confirmation-success/<int:user_id>/', email_confirmation_success, name='email_confirmation_success'),
     path('authentication/send_sms_verification/<int:user_id>/', views.send_sms_verification, name='send_sms_verification'),
     path('authentication/verify_sms_code/<int:user_id>/', verify_sms_code, name='verify_sms_code'),
+    path('resolve-requests/', resolve_user_requests, name='resolve_user_requests'),
+    path('resolve-request/<int:request_id>/', resolve_request, name='resolve_request'),
 
 
 ]

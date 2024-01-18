@@ -39,6 +39,7 @@ from .models import CustomUser, AuditTrail, UserRequest
 from .utils import send_sms_verification_code, parse_user_agent, get_screen_resolution, get_geolocation, generate_device_identifier, get_network_info
 from .forms import PasswordResetRequestForm, ForgotSecurityAnswersForm, ContactForm
 from .validators import calculate_password_strength
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.hashers import make_password
 
 # Create your views here.
@@ -376,7 +377,16 @@ def contact_customer_care(request, user_id):
         if form.is_valid():
             problem_description = form.cleaned_data['problem_description']
 
-            UserRequest.objects.create(user=user, problem_description=problem_description)
+            user_request = UserRequest.objects.create(user=user, problem_description=problem_description)
+
+            # Send an email notification to the superuser
+            send_mail(
+                'New customer care request from {user}',
+                f'A new request has been submitted by {user.username}. Please check the Dashboard for details.',
+                'alexmutonga@gmail.com',
+                ['alexmutonga@gmail.com'],
+                fail_silently=True,
+            )
 
             print(f"User {user.username} Requet recieved. Customer care will contact you via email.")
             print(f"Problem Description: {problem_description}")
@@ -387,6 +397,30 @@ def contact_customer_care(request, user_id):
             form = ContactForm()
     return render(request, 'user/contact_customer_care.html', {'user': user, 'form': form})
 
+def resolve_request(request, request_id):
+    user_request = get_object_or_404(UserRequest, id=request_id)
+
+    # Mark the Request as solved
+    user_request.resolved = True
+    user_request.save()
+
+    # Send an email to the user 
+    send_mail(
+        'Your Request has been resolved',
+        'Your reported problem has been solved. If you had issues with account recovery, please use the provided reset link.',
+        'alexmutonga3@gmail.com',
+        [user_request.user.email],
+        fail_silently=False,
+    )
+
+    messages.success(request, 'Request resolved. The user has been notified')
+    return redirect('dashboard')
+
+@staff_member_required
+def resolve_user_requests(request):
+    user_requests = UserRequest.objects.filter(resolved=False)
+
+    return render (request, 'user/resolve_user_requests.html', {'user_requests': user_requests})
 
 
 @csrf_protect

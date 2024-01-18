@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <h2>Resolve User Requests </h2>
+    <ul>
+        {% for user_request in user_requests %}
+        <li>
+            {{user_request.user.username}} - {{ user_request.problem_description }}
+            <form method="post" action="{% url 'resolve_request' request_id=user_request.id %}">
+                {% csrf_token %}
+                <button type="submit"> Mark as Resolved</button>
+            </form>
+        </li>
+    </ul>
+
+{% endblock %}

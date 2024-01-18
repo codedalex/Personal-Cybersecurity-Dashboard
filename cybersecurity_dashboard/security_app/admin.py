@@ -1,7 +1,8 @@
 
 
-
+from django.urls import reverse
 from django.contrib import admin
+from django.utils.html import format_html
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, SecurityGroup, AuditTrail, UserRequest
 from .forms import CustomUserAdminForm
@@ -33,6 +34,21 @@ class CustomUserAdmin(UserAdmin):
             'fields': ('username','email'),
             }),
             )
+
+    actions = ['resolve_user_requests']
+
+    def resolve_user_requests(self, request, queryset):
+        for user in queryset:
+            UserRequest.objects.filter(user=user, resolved=False).update(resolved=True)
+    resolve_user_requests.short_description = 'Mark Selected user requests as resolved'
+
+    def user_requests_link(self, obj):
+        return format_html('<a href="{}">View User Requests</a>', reverse('admin:security_app_userrequest_changelist') + f'?user__id__exact={obj.id}')
+
+    user_requests_link.short_description = 'User Requests'
+    user_requests_link.allow_tags = True
+
+    list_display = ('username', 'email', 'phone_number', 'is_active', 'is_staff', 'user_requests_link')
 
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(SecurityGroup)
