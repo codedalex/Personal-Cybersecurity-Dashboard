@@ -220,6 +220,11 @@ def user_login_failed_handler(sender, credentials, request, **kwargs):
         # Save the changes
         user.save()
 
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    token = models.CharField(max_length=256, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
 # Create Custom User Groups
 class SecurityGroup(Group):
     class Meta:

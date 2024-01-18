@@ -4,8 +4,9 @@ from django.urls import reverse
 from django.contrib import admin
 from django.utils.html import format_html
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, SecurityGroup, AuditTrail, UserRequest
+from .models import CustomUser, SecurityGroup, AuditTrail, UserRequest, PasswordResetToken
 from .forms import CustomUserAdminForm
+
 
 # Register your models here.
 class CustomUserAdmin(UserAdmin):
@@ -35,7 +36,7 @@ class CustomUserAdmin(UserAdmin):
             }),
             )
 
-    actions = ['resolve_user_requests']
+    actions = ['resolve_user_requests', 'send_recovery_email']
 
     def resolve_user_requests(self, request, queryset):
         for user in queryset:
@@ -50,7 +51,13 @@ class CustomUserAdmin(UserAdmin):
 
     list_display = ('username', 'email', 'phone_number', 'is_active', 'is_staff', 'user_requests_link')
 
+    def send_recovery_email(self, request, queryset):
+        for user in queryset:
+            send_recovery_email(user)
+        self.message_user(request, f'Recovery email sent to {queryset.count()} users.')
+
 admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(PasswordResetToken)
 admin.site.register(SecurityGroup)
 admin.site.register(AuditTrail)
 admin.site.register(UserRequest)

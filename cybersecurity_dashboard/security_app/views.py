@@ -404,23 +404,38 @@ def resolve_request(request, request_id):
     user_request.resolved = True
     user_request.save()
 
-    # Send an email to the user 
-    send_mail(
-        'Your Request has been resolved',
-        'Your reported problem has been solved. If you had issues with account recovery, please use the provided reset link.',
-        'alexmutonga3@gmail.com',
-        [user_request.user.email],
-        fail_silently=False,
-    )
+    try:
+        # Send an email to the user 
+        send_mail(
+            'Your Request has been resolved',
+            'Your reported problem has been solved. If you had issues with account recovery, please use the provided reset link.',
+            'alexmutonga3@gmail.com',
+            [user_request.user.email],
+            fail_silently=False,
+        )
+        print("Email sent successfully")
+    except Exception as e:
+        print(f"Email sending failed. Error: {e}")
+
 
     messages.success(request, 'Request resolved. The user has been notified')
     return redirect('dashboard')
 
-@staff_member_required
-def resolve_user_requests(request):
-    user_requests = UserRequest.objects.filter(resolved=False)
+def request_solved_email(user):
+    subject = 'Your Request has been resolved'
+    message = 'Your reported problem has been solved. If you had issues with account recovery, please use the provided reset link.'
+    from_email = 'alexmutonga3@gmail.com'
+    recipient_list = [user.email]
 
-    return render (request, 'user/resolve_user_requests.html', {'user_requests': user_requests})
+    send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+
+@staff_member_required
+def resolve_user_requests(request, queryset):
+    for user in queryset:
+        UserRequest.objects.filter(user=user, resolved=False).update(resolved=True)
+        request_solved_email(user)
+
+    return render(request, 'user/resolve_user_requests.html', {'user_requests': UserRequest.objects.filter(resolved=False)})
 
 
 @csrf_protect
@@ -543,6 +558,8 @@ def enter_code(request):
     return render(request, 'user/enter_code.html', {'user': user})
 
 def reset_password(request, uidb64, token):
+    password_reset_token = get_object_or_404(PasswordResetToken, token=token)
+
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))
         user = CustomUser.objects.get(pk=uid)
@@ -563,10 +580,15 @@ def reset_password(request, uidb64, token):
                 user.password = make_password(form.cleaned_data['password1'])
                 user.save()
 
+                authenticated_user = authenticate(request, username=user.username, password=form.cleaned_data['password1'])
+
+                password_reset_token.delete()
+
                 return render(request, 'user/password_reset_done.html')
         else:
             form = CustomPasswordResetForm(user, initial={'user': user})  # Pass user=user here
         return render(request, 'user/reset_password.html', {'form': form, 'uidb64': uidb64, 'token': token})
+        
 
     else:
         messages.error(request, 'Invalid reset link.')
